@@ -1,5 +1,5 @@
-// This script will deploy commands for a specified test guild.
-
+/* This script will deploy application commands. For now, it only deploys app commands to a specified test guild,
+code to deploy globally is commented. */
 const { REST, Routes } = require('discord.js');
 const { clientId, testGuildId, token } = require('./config.json');
 const fs = require('node:fs');
@@ -35,6 +35,8 @@ const rest = new REST().setToken(token);
     try {
         console.log(`Deploying ${commands.length} application commands.`);
         const data = await rest.put(Routes.applicationGuildCommands(clientId, testGuildId), { body: commands });
+        
+        // const data = await rest.put(Routes.applicationCommands(clientId), { body: commands });
 
         console.log(`Deployed ${commands.length} application commands successfully.`);
     } catch (error) {

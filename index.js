@@ -5,19 +5,15 @@ const { token } = require('./config.json');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.once(Events.ClientReady, (readyClient) => {
-    console.log(`${readyClient.user.tag} is online, and ready to go.`);
-});
-
 client.commands = new Collection();
 
 // Returns the folder path, and then reads the contents of, the commands folder.
-const foldersPath = path.join(__dirname, 'commands');
-const commandFolders = fs.readdirSync(foldersPath);
+const commandFoldersPath = path.join(__dirname, 'commands');
+const commandFolders = fs.readdirSync(commandFoldersPath);
 
-// For every subfolder in the commands folder, read and then handle each command within the subfolder.
+// For every subfolder in the commands folder, validate each command in the subfolder and add them to the commands collection.
 for (const folder of commandFolders) {
-    const commandsPath = path.join(foldersPath, folder);
+    const commandsPath = path.join(commandFoldersPath, folder);
     const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.js'));
 
     for (const file of commandFiles) {
@@ -32,31 +28,19 @@ for (const folder of commandFolders) {
     }
 }
 
-client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-    const command = interaction.client.commands.get(interaction.commandName);
+// Loops through the event folder checking for event files, if a valid event file is found, start listening for the event.
+const eventFolderPath = path.join(__dirname, 'events');
+const eventsFolder = fs.readdirSync(eventFolderPath).filter((file) => file.endsWith('.js'));
 
-    if (!command) {
-        console.error(`The command at ${interaction.commandName} does not exist.`);
-        return;
-    }
+for (file of eventsFolder) {
+    const filePath = path.join(eventFolderPath, file);
+    const event = require(filePath);
 
-    try {
-        await command.execute(interaction)
-    } catch(error) {
-        console.error(error);
-		if (interaction.replied || interaction.deferred) {
-			await interaction.followUp({
-				content: 'An error executing this command has occurred.',
-				flags: MessageFlags.Ephemeral,
-			});
-		} else {
-			await interaction.reply({
-				content: 'An error executing this command has occurred.',
-				flags: MessageFlags.Ephemeral,
-			});
-		}
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args));
     }
-});
+}
 
 client.login(token);
